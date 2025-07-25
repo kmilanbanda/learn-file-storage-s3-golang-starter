@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
+	"crypto/rand"
+	"encoding/base64"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
@@ -44,6 +44,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	defer file.Close()
+
 	mediaType := header.Header.Get("Content-Type")
 	if mediaType == "" {
 		respondWithError(w, http.StatusBadRequest, "Unable to get Content-Type header", err)
@@ -51,13 +52,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	} else if mediaType != "image/jpeg" && mediaType != "image/png" {
 		respondWithError(w, http.StatusBadRequest, "Incompatible file type", err)
 		return
-	}
-
-	_, err = io.ReadAll(file)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Unable to read", err)
-		return
-	}
+	}	
 
 	video, err := cfg.db.GetVideo(videoID)
 	if err != nil {
@@ -69,11 +64,15 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	
-	mediaTypeSplit := strings.Split(mediaType, "/")
-	fileExt := mediaTypeSplit[len(mediaTypeSplit)-1]
-	fileName := fmt.Sprintf("%s.%s", videoID, fileExt)
-	filePath := filepath.Join(cfg.assetsRoot, fileName)
-	outputFile, err := os.Create(filePath)
+	bytes := make([]byte, 32)
+	_, err = rand.Read(bytes); if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Unable to create thumbnail file", err)
+		return
+	}
+	randString := base64.RawURLEncoding.EncodeToString(bytes)
+
+	assetPath := getAssetPath(randString, mediaType)
+	outputFile, err := os.Create(cfg.getAssetDiskPath(assetPath))
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Unable to create thumbnail file", err)
 		return
@@ -83,7 +82,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	thumbnailURL := fmt.Sprintf("http://localhost:%s/assets/%s", cfg.port, fileName)
+	thumbnailURL := cfg.getAssetURL(assetPath)
 
 	video.ThumbnailURL = &thumbnailURL
 	err = cfg.db.UpdateVideo(video)
