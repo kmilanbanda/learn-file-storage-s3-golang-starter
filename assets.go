@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"crypto/rand"
+	"encoding/base64"
 )
 
 func (cfg apiConfig) ensureAssetsDir() error {
@@ -14,9 +16,15 @@ func (cfg apiConfig) ensureAssetsDir() error {
 	return nil
 }
 
-func getAssetPath(encodedString, mediaType string) string {
+func getAssetPath(mediaType string) string {
+	bytes := make([]byte, 32)
+	_, err := rand.Read(bytes); if err != nil {
+		panic("failed to generate random bytes")	
+	}
+	id := base64.RawURLEncoding.EncodeToString(bytes)
+	
 	ext := mediaTypeToExt(mediaType)
-	return fmt.Sprintf("%s%s", encodedString, ext)
+	return fmt.Sprintf("%s%s", id, ext)
 }
 
 func (cfg apiConfig) getAssetDiskPath(assetPath string) string {
@@ -34,3 +42,5 @@ func mediaTypeToExt(mediaType string) string {
 	}
 	return "." + parts[1]
 }
+
+

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"crypto/rand"
-	"encoding/base64"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
@@ -63,15 +61,8 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		respondWithError(w, http.StatusUnauthorized, "User is not owner of this video", err)
 		return
 	}
-	
-	bytes := make([]byte, 32)
-	_, err = rand.Read(bytes); if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Unable to create thumbnail file", err)
-		return
-	}
-	randString := base64.RawURLEncoding.EncodeToString(bytes)
 
-	assetPath := getAssetPath(randString, mediaType)
+	assetPath := getAssetPath(mediaType)
 	outputFile, err := os.Create(cfg.getAssetDiskPath(assetPath))
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Unable to create thumbnail file", err)

@@ -93,7 +93,7 @@ func (cfg *apiConfig) handlerVideoGet(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Couldn't get video", err)
 		return
-	}
+	}	
 
 	respondWithJSON(w, http.StatusOK, video)
 }
